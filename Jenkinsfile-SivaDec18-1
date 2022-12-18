@@ -1,7 +1,7 @@
 pipeline{
     agent any
 
-    Stages{
+    stages{
         stage("Git checkout"){
             steps{
                 git credentialsId: 'Git-Cred', url: 'https://github.com/VandanSiva/myweb.git'
