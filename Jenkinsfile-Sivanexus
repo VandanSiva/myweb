@@ -1,0 +1,58 @@
+pipeline {
+    agent any
+
+    tools{
+        maven Maven:3.6.1
+    }
+
+    stages{
+        stage("Git checkout"){
+            steps{
+                git credentialsId: 'Git-Cred', url: 'https://github.com/VandanSiva/myweb.git'
+            }
+        }
+        stage("maven build"){
+            steps{
+                sh "mvn clean sonar:sonar package"
+                sh "mv target/*war target/myweb.war"
+            }
+        }
+        stage("Upload to nexus"){
+            steps{
+                nexusArtifactUploader artifacts:
+                 [
+                    [
+                        artifactId: 'myweb', 
+                        classifier: '', 
+                        file: 'target/*.war', 
+                        type: 'war'
+                    ]
+                ], 
+                        credentialsId: 'Nexus-Cred', 
+                        groupId: 'in.javahome', 
+                        nexusUrl: '172.31.80.155:8081', 
+                        nexusVersion: 'nexus3', 
+                        protocol: 'http', 
+                        repository: 'siva-releases', 
+                        version: '8.2.0'
+
+            }
+        }
+        stage("Deploy"){
+            steps{
+                sshagent(['tomcat-cred']) {
+
+                sh """
+                   scp -o StrictHostkeyChecking=no target/*.war ec2-user@172.31.94.228:/home/ec2-user/tomcat/webapps/
+                   ssh ec2-user@172.31.94.228 /home/ec2-user/tomcat/bin/shutdown.sh
+                   ssh ec2-user@172.31.94.228 /home/ec2-user/tomcat/bin/startup.sh
+
+                   """
+    
+                }
+                
+
+            }
+        }
+    }
+}
