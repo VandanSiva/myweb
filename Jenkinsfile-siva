@@ -1,0 +1,32 @@
+pipeline {
+    agent{
+        any
+    }
+    stages{
+        stage("Git checkout"){
+            steps{
+                git credentialsId: 'Git-Cred', url: 'https://github.com/VandanSiva/myweb.git'
+            }
+        }
+        stage("Maven Build"){
+            steps{
+                sh "mvn clean package"
+                sh "mv target/*.war target/myweb.war"
+   
+            }
+            
+        }
+        stage("Deploy-dev"){
+            steps{
+                sshagent(['tomcat-cred']) {
+                sh """
+                   scp -o StrictHostKeyChecking=no target/myweb.war ec2-user@172.31.93.69:/home/ec2-user/tomcat/webapps/
+                   ssh ec2-user@172.31.93.69 /home/ec2-user/tomcat/bin/shutdown.sh
+                   ssh ec2-user@172.31.93.69 /home/ec2-user/tomcat/bin/startup.sh
+
+                   """  
+                }
+            }
+        }
+    }
+}
